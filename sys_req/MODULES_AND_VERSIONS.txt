@@ -1,0 +1,25 @@
+CQTwin Modules and Versions
+==============================
+
+Python runtime:
+- Python 3.9+ (recommended: 3.10+)
+
+External Python modules used by this project:
+- numpy >= 1.24, < 3.0
+
+Tested with:
+- Python 3.11.4 + numpy 1.24.3 — the environment the released results were produced with.
+- Forward-compatible with numpy 2.x, which pip selects automatically on Python 3.12 / 3.13
+  (the < 3.0 cap keeps the project below numpy's next major API break; numpy 1.24 has no
+  wheels for those interpreters).
+- recommend.py uses only basic, long-stable numpy API (mean / percentile / linalg / etc.),
+  so 1.24 is a verified minimum, not an aspirational floor.
+
+Notes:
+- Core CQSim simulator and dashboard backend/frontend logic use Python standard library and browser JS.
+- numpy is required only by the runtime recommendation module in dashboard/recommend.py;
+  the engine, unit tests, and dashboard HTTP server do not import it.
+- matplotlib is NOT a dependency of this project. The paper's figure/analysis scripts are
+  maintained separately (outside this repository) and are not needed to build or run CQTwin.
+- Machine-readable install list is in sys_req/requirements.txt.
+- Recommended setup command: bash sys_req/install_or_update_modules.sh

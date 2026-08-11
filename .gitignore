@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CQTwin .gitignore
+# Tracked: source, dashboard, tools, tests, docs, and the input traces under
+# data/InputFiles/. Everything a run *generates* is ignored (the empty output
+# dirs are kept via their .gitkeep files so the layout is preserved).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Build artifacts ──────────────────────────────────────────────────────────
+build/
+build_*/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+*.o
+*.a
+*.so
+*.dylib
+
+# ── Python ───────────────────────────────────────────────────────────────────
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ── OS / editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+# .vscode/ is intentionally not ignored — keep shared editor settings if desired
+
+# ── Generated engine outputs (keep the dirs, ignore their contents) ──────────
+data/Results/*
+!data/Results/.gitkeep
+data/native_results/*
+!data/native_results/.gitkeep
+data/Config/*
+!data/Config/.gitkeep
+data/engine_runs/*
+!data/engine_runs/.gitkeep
+data/Fmt/*
+!data/Fmt/.gitkeep
+data/Debug/*
+!data/Debug/.gitkeep
+data/Maintenance/*
+!data/Maintenance/.gitkeep
+
+# ── Generated dashboard data (keep the dirs, ignore their contents) ──────────
+dashboard/data/run_cache/*
+!dashboard/data/run_cache/.gitkeep
+dashboard/data/timeseries/*
+!dashboard/data/timeseries/.gitkeep
+dashboard/data/worklogs/*
+!dashboard/data/worklogs/.gitkeep
+dashboard/data/snapshot_forks/*
+!dashboard/data/snapshot_forks/.gitkeep
+dashboard/data/recommendations/*
+!dashboard/data/recommendations/.gitkeep
+dashboard/data/scenario_runs/*
+!dashboard/data/scenario_runs/.gitkeep
+dashboard/data/operator_forks/*
+!dashboard/data/operator_forks/.gitkeep
+dashboard/data/summary.json
+dashboard/data/worklog.json
+
+# ── Misc run artifacts ───────────────────────────────────────────────────────
+*.log
+greedy_switches.csv

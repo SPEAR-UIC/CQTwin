@@ -1,0 +1,13 @@
+# CQTwin Python dependency versions
+#
+# The C++ engine, unit tests, and dashboard HTTP server run on the Python
+# standard library alone. numpy is required by ONE optional module: the runtime
+# recommendation feature in dashboard/recommend.py.
+#
+# Floor 1.24 is the version the released results were produced and verified with
+# (Python 3.11.4); recommend.py uses only long-stable numpy API, so this is a
+# verified minimum rather than an aspirational pin. The < 3.0 cap stays below
+# numpy's next major API break while still admitting numpy 2.x, which pip selects
+# automatically for Python 3.12 / 3.13 (numpy 1.24 has no wheels there).
+
+numpy>=1.24,<3.0

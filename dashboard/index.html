@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>__PROJECT_NAME__</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=20260801_1400">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="bg-layer" aria-hidden="true">
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="grid-mask"></div>
+</div>
+
+<header>
+    <div class="header-inner">
+        <div>
+            <h1>__PROJECT_NAME__</h1>
+            <p class="subtitle">HPC Scheduling Simulator Dashboard</p>
+        </div>
+        <div class="header-actions">
+            <button id="btn-theme-toggle" class="theme-toggle" type="button" aria-label="Toggle day and night mode" aria-pressed="false" title="Switch to light mode">
+                <span class="theme-toggle-label">Day</span>
+                <span class="theme-toggle-track"><span class="theme-toggle-knob"></span></span>
+                <span class="theme-toggle-label">Night</span>
+            </button>
+            <button id="btn-new-run" class="btn-ghost hidden">+ New Experiment</button>
+        </div>
+    </div>
+</header>
+
+<section id="setup-wizard">
+    <div class="wizard-wrap">
+        <h2>Configure Experiment</h2>
+
+        <details class="wizard-card guide-card config-help-toggle">
+            <summary class="config-help-summary">Help: Input Settings</summary>
+            <div class="table-wrap" style="margin-bottom:0;">
+                <table class="config-help-table">
+                    <thead>
+                        <tr><th>Setting</th><th>What it does</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Job Trace (.swf)</td><td>Workload trace used as simulation input.</td></tr>
+                        <tr><td>Node Structure</td><td>Cluster size/profile file used for available processors.</td></tr>
+                        <tr><td>Jobs to Read</td><td>How many jobs to read from trace (`-1` means all jobs).</td></tr>
+                        <tr><td>Run Label</td><td>Optional suffix in output naming for easy comparison.</td></tr>
+                        <tr><td>Output Mode</td><td>`Keep every run` creates new outputs; `Overwrite` reuses default output name.</td></tr>
+                        <tr><td>Algorithm Preset</td><td>Named native heuristic policy used by the C++ simulator.</td></tr>
+                        <tr><td>Native Policies</td><td>All 20 built-in heuristics are available directly in __PROJECT_NAME__ (no formula needed). Notation: <em>w</em>=wait, <em>t</em>=requested walltime, <em>n</em>=requested procs, <em>N</em>=total procs; the highest-priority job dispatches first.
+                            <ul class="policy-help-list">
+                                <li>`fcfs` — earliest submit first</li>
+                                <li>`lcfs` — latest submit first</li>
+                                <li>`sjf` / `ljf` — shortest / longest requested walltime <em>t</em></li>
+                                <li>`srf` / `lrf` — fewest / most requested processors <em>n</em></li>
+                                <li>`scf` / `lcf` — smallest / largest resource–time product <em>t·n</em></li>
+                                <li>`wfp1` / `wfp2` / `wfp3` — weighted wait-to-walltime: linear <em>w/t</em>, quadratic <em>(w/t)²·n</em>, cubic <em>(w/t)³·n</em></li>
+                                <li>`sww` — size-weighted wait <em>(w/t)·n</em></li>
+                                <li>`fcsj` — size-normalized wait <em>w/(t·n)</em> (favors small jobs)</li>
+                                <li>`fat` — size-aware weighted wait <em>(w/t)·(n/N)³</em></li>
+                                <li>`unicep` — wait ÷ processor fraction <em>w/(log₂(n/N)·t)</em></li>
+                                <li>`f1`–`f4` — learned composite priority functions</li>
+                                <li>`bsld` — bounded slowdown <em>(w+t)/max(t,τ)</em>, τ=1h (clamped ≥1)</li>
+                            </ul>
+                        </td></tr>
+                        <tr><td>Legacy Formula Presets</td><td>Older formula-style presets are translated to native heuristics when loading existing presets or results.</td></tr>
+                        <tr><td>Legacy Alg / Formula</td><td>Optional raw `CQSim` algorithm string such as `w,+,2` or `w/t`. Known aliases map to native heuristics; unsupported custom formulas are preserved but fall back to native defaults.</td></tr>
+                        <tr><td>Sign</td><td>Stored exactly for compatibility with `CQSim` presets and config files.</td></tr>
+                        <tr><td>Backfill Mode</td><td>Exact legacy modes `0`, `1`, and `2` are available. Current native engine still treats `1` and `2` as enabled modes.</td></tr>
+                        <tr><td>Window Size</td><td>Lookahead size for native heuristic selection. Minimum supported value is `1`.</td></tr>
+                        <tr><td>Window Params</td><td>Stored for compatibility; the first value mirrors the native window size.</td></tr>
+                        <tr><td>Backfill Params</td><td>Optional extra parameters for backfill module.</td></tr>
+                        <tr><td>Adaptive Backfill/Window/Algorithm</td><td>Enable adaptive behavior for each module.</td></tr>
+                        <tr><td>Adaptive Backfill/Window/Algorithm Params</td><td>Optional CSV parameters for adaptive modules.</td></tr>
+                        <tr><td>Start (seconds)</td><td>Virtual start offset in trace timeline.</td></tr>
+                        <tr><td>Anchor Job Index</td><td>Read starts at this job index in the input trace.</td></tr>
+                        <tr><td>Start Date</td><td>Optional simulation start datetime string.</td></tr>
+                        <tr><td>Monitor Interval</td><td>Sampling interval for utilization/queue `.ult` records.</td></tr>
+                        <tr><td>Read Input Freq</td><td>How often jobs are fetched during simulation loop.</td></tr>
+                        <tr><td>Log Frequency</td><td>How often debug logs are emitted.</td></tr>
+                        <tr><td>Cluster Fraction</td><td>Workload density multiplier against original trace.</td></tr>
+                        <tr><td>Node Count / Procs per Node</td><td>Optional override for cluster capacity.</td></tr>
+                        <tr><td>Debug Level</td><td>Simulator debug verbosity level.</td></tr>
+                        <tr><td>Legacy Names / Config / Path / Extension Fields</td><td>All `CQSim` config file options are available in the compatibility section and are saved with presets and run metadata.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </details>
+
+        <div class="wizard-card">
+            <div class="wizard-card-title">1 - Input & Run Identity</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sel-job-trace">Job Trace (.swf)</label>
+                    <select id="sel-job-trace"><option value="">Loading files...</option></select>
+                </div>
+                <div class="form-group">
+                    <label for="sel-node-struc">Node Structure</label>
+                    <select id="sel-node-struc"><option value="">Same as job trace</option></select>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-read-num">Jobs to Read</label>
+                    <input type="number" id="inp-read-num" value="-1" min="-1">
+                    <span class="hint">-1 = all jobs</span>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="inp-run-label">Run Label</label>
+                    <input type="text" id="inp-run-label" placeholder="e.g. fifo_baseline">
+                    <span class="hint">Used in result naming and comparison labels</span>
+                </div>
+                <div class="form-group">
+                    <label for="sel-output-mode">Output Mode</label>
+                    <select id="sel-output-mode">
+                        <option value="new" selected>Keep every run (recommended)</option>
+                        <option value="overwrite">Overwrite default result file</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row upload-row">
+                <label class="btn-upload" for="file-upload-input">Upload your own .swf</label>
+                <input type="file" id="file-upload-input" accept=".swf" style="display:none">
+                <span id="upload-status" class="hint"></span>
+            </div>
+        </div>
+
+        <div class="wizard-card">
+            <div class="wizard-card-title">2 - Scheduling Policy</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sel-alg-preset">Algorithm Preset</label>
+                    <select id="sel-alg-preset">
+                        <option value="fcfs" data-sign="1" data-legacy="w,+,2" selected>FCFS</option>
+                        <option value="lcfs" data-sign="1" data-legacy="lcfs">LCFS</option>
+                        <option value="sjf" data-sign="1" data-legacy="t">SJF</option>
+                        <option value="ljf" data-sign="1" data-legacy="-t">LJF</option>
+                        <option value="srf" data-sign="1" data-legacy="srf">SRF</option>
+                        <option value="lrf" data-sign="1" data-legacy="lrf">LRF</option>
+                        <option value="scf" data-sign="1" data-legacy="scf">SCF</option>
+                        <option value="lcf" data-sign="1" data-legacy="lcf">LCF</option>
+                        <option value="wfp1" data-sign="1" data-legacy="w/t">WFP1</option>
+                        <option value="wfp2" data-sign="1" data-legacy="wfp2">WFP2</option>
+                        <option value="wfp3" data-sign="1" data-legacy="(n*(w/(t if t>0 else 1))**3)">WFP3</option>
+                        <option value="sww" data-sign="1" data-legacy="sww">SWW</option>
+                        <option value="fcsj" data-sign="1" data-legacy="fcsj">FCSJ</option>
+                        <option value="fat" data-sign="1" data-legacy="fat">FAT</option>
+                        <option value="unicep" data-sign="1" data-legacy="unicep">UNICEP</option>
+                        <option value="f1" data-sign="1" data-legacy="f1">F1</option>
+                        <option value="f2" data-sign="1" data-legacy="f2">F2</option>
+                        <option value="f3" data-sign="1" data-legacy="f3">F3</option>
+                        <option value="f4" data-sign="1" data-legacy="f4">F4</option>
+                        <option value="bsld" data-sign="1" data-legacy="bsld">BSLD</option>
+                    </select>
+                </div>
+                <div class="form-group" id="custom-alg-wrap">
+                    <label for="inp-alg-custom">Legacy Alg / Formula (optional)</label>
+                    <input type="text" id="inp-alg-custom" placeholder="e.g. w,+,2 or w/t">
+                    <span class="hint">If set, this raw `CQSim` alg string overrides the preset.</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-alg-sign">Alg Sign</label>
+                    <input type="text" id="inp-alg-sign" value="1,0,1">
+                </div>
+            </div>
+        </div>
+
+        <div class="wizard-card">
+            <div class="wizard-card-title">3 - Backfill, Window, Adaptation</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="sel-backfill">Backfill Mode</label>
+                    <select id="sel-backfill">
+                        <option value="2" selected>2 - Conservative</option>
+                        <option value="1">1 - EASY</option>
+                        <option value="0">0 - Disabled</option>
+                    </select>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-win">Window Size</label>
+                    <input type="number" id="inp-win" value="5" min="1">
+                    <span class="hint">Native lookahead window</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-win-para">Window Params</label>
+                    <input type="text" id="inp-win-para" value="5,0,0">
+                    <span class="hint">Compatibility field; first value tracks window size</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-bf-para">Backfill Params</label>
+                    <input type="text" id="inp-bf-para" placeholder="optional CSV">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group narrow">
+                    <label for="sel-ad-bf">Adaptive Backfill</label>
+                    <select id="sel-ad-bf">
+                        <option value="0" selected>Off</option>
+                        <option value="1">On</option>
+                    </select>
+                </div>
+                <div class="form-group narrow">
+                    <label for="sel-ad-win">Adaptive Window</label>
+                    <select id="sel-ad-win">
+                        <option value="0" selected>Off</option>
+                        <option value="1">On</option>
+                    </select>
+                </div>
+                <div class="form-group narrow">
+                    <label for="sel-ad-alg">Adaptive Algorithm</label>
+                    <select id="sel-ad-alg">
+                        <option value="0" selected>Off</option>
+                        <option value="1">On</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="inp-ad-win-para">Adaptive Window Params</label>
+                    <input type="text" id="inp-ad-win-para" placeholder="optional CSV">
+                </div>
+                <div class="form-group">
+                    <label for="inp-ad-bf-para">Adaptive Backfill Params</label>
+                    <input type="text" id="inp-ad-bf-para" value="ad_bf_para.set">
+                </div>
+                <div class="form-group">
+                    <label for="inp-ad-alg-para">Adaptive Algorithm Params</label>
+                    <input type="text" id="inp-ad-alg-para" placeholder="optional CSV">
+                </div>
+            </div>
+        </div>
+
+        <div class="wizard-card">
+            <div class="wizard-card-title">4 - Time Range & Sampling</div>
+            <div class="form-row">
+                <div class="form-group narrow">
+                    <label for="inp-start">Start (seconds)</label>
+                    <input type="number" id="inp-start" value="0" min="0">
+                    <span class="hint">Virtual trace start offset</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-anchor">Anchor Job Index</label>
+                    <input type="number" id="inp-anchor" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="inp-start-date">Start Date (optional)</label>
+                    <input type="text" id="inp-start-date" placeholder="YYYY-MM-DD or empty">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-monitor">Monitor Interval</label>
+                    <input type="number" id="inp-monitor" value="500" min="50">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-read-input-freq">Read Input Freq</label>
+                    <input type="number" id="inp-read-input-freq" value="1000" min="1">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-log-freq">Log Frequency</label>
+                    <input type="number" id="inp-log-freq" value="1" min="1">
+                </div>
+            </div>
+        </div>
+
+        <div class="wizard-card">
+            <div class="wizard-card-title">5 - Cluster & Diagnostics</div>
+            <div class="form-row">
+                <div class="form-group narrow">
+                    <label for="inp-frac">Cluster Fraction</label>
+                    <input type="number" id="inp-frac" value="1.0" step="0.05" min="0.05" max="4.0">
+                    <span class="hint">Job density multiplier</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-node-count">Node Count</label>
+                    <input type="number" id="inp-node-count" placeholder="from trace" min="1">
+                    <span class="hint">Override cluster nodes</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-procs-per-node">Procs / Node</label>
+                    <input type="number" id="inp-procs-per-node" placeholder="1" min="1">
+                    <span class="hint">Total = nodes x procs</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-debug-lvl">Debug Level</label>
+                    <input type="number" id="inp-debug-lvl" value="3" min="0" max="6">
+                </div>
+            </div>
+        </div>
+
+        <details class="wizard-card guide-card">
+            <summary class="config-help-summary">6 - Legacy CQSim Compatibility Fields</summary>
+            <div class="form-row" style="margin-top:1rem;">
+                <div class="form-group narrow">
+                    <label for="inp-pre-name">Pre Name</label>
+                    <input type="text" id="inp-pre-name" value="CQSIM_">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-output">Output Stem</label>
+                    <input type="text" id="inp-output" placeholder="optional explicit stem">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-debug">Debug Stem</label>
+                    <input type="text" id="inp-debug" placeholder="optional explicit stem">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-job-save">Job Save Stem</label>
+                    <input type="text" id="inp-job-save" placeholder="defaults from trace">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-node-save">Node Save Stem</label>
+                    <input type="text" id="inp-node-save" placeholder="defaults from trace">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group narrow">
+                    <label for="inp-config-n">Config N</label>
+                    <input type="text" id="inp-config-n" value="config_n.set">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-config-sys">Config Sys</label>
+                    <input type="text" id="inp-config-sys" value="config_sys.set">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-path-in">Path In</label>
+                    <input type="text" id="inp-path-in" value="InputFiles/">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-path-out">Path Out</label>
+                    <input type="text" id="inp-path-out" value="Results/">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-path-fmt">Path Fmt</label>
+                    <input type="text" id="inp-path-fmt" value="Fmt/">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-path-debug">Path Debug</label>
+                    <input type="text" id="inp-path-debug" value="Debug/">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group narrow">
+                    <label for="inp-ext-fmt-j">Ext Fmt J</label>
+                    <input type="text" id="inp-ext-fmt-j" value=".csv">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-ext-fmt-n">Ext Fmt N</label>
+                    <input type="text" id="inp-ext-fmt-n" value=".csv">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-ext-fmt-j-c">Ext Fmt J C</label>
+                    <input type="text" id="inp-ext-fmt-j-c" value=".con">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-ext-fmt-n-c">Ext Fmt N C</label>
+                    <input type="text" id="inp-ext-fmt-n-c" value=".con">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-ext-jr">Ext JR</label>
+                    <input type="text" id="inp-ext-jr" value=".rst">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-ext-si">Ext SI</label>
+                    <input type="text" id="inp-ext-si" value=".ult">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group narrow">
+                    <label for="inp-ext-ai">Ext AI</label>
+                    <input type="text" id="inp-ext-ai" value=".adp">
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-ext-debug">Ext Debug</label>
+                    <input type="text" id="inp-ext-debug" value=".log">
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <span class="hint">These fields match `CQSim` config file options, are saved with presets/run metadata, and each run writes a legacy `config_sys.set` / `config_n.set` bundle under `data/Config/&lt;run&gt;/`.</span>
+                </div>
+            </div>
+        </details>
+
+        <div class="wizard-card">
+            <div class="wizard-card-title">7 - Parameter Sweep + Pareto Front</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Sweep Policies</label>
+                    <div class="checkbox-group" id="sweep-policy-group">
+                        <label><input type="checkbox" name="sweep-policy" value="fcfs" checked>FCFS</label>
+                        <label><input type="checkbox" name="sweep-policy" value="lcfs">LCFS</label>
+                        <label><input type="checkbox" name="sweep-policy" value="sjf">SJF</label>
+                        <label><input type="checkbox" name="sweep-policy" value="ljf">LJF</label>
+                        <label><input type="checkbox" name="sweep-policy" value="srf">SRF</label>
+                        <label><input type="checkbox" name="sweep-policy" value="lrf">LRF</label>
+                        <label><input type="checkbox" name="sweep-policy" value="scf">SCF</label>
+                        <label><input type="checkbox" name="sweep-policy" value="lcf">LCF</label>
+                        <label><input type="checkbox" name="sweep-policy" value="wfp1">WFP1</label>
+                        <label><input type="checkbox" name="sweep-policy" value="wfp2">WFP2</label>
+                        <label><input type="checkbox" name="sweep-policy" value="wfp3">WFP3</label>
+                        <label><input type="checkbox" name="sweep-policy" value="sww">SWW</label>
+                        <label><input type="checkbox" name="sweep-policy" value="fcsj">FCSJ</label>
+                        <label><input type="checkbox" name="sweep-policy" value="fat">FAT</label>
+                        <label><input type="checkbox" name="sweep-policy" value="unicep">UNICEP</label>
+                        <label><input type="checkbox" name="sweep-policy" value="f1">F1</label>
+                        <label><input type="checkbox" name="sweep-policy" value="f2">F2</label>
+                        <label><input type="checkbox" name="sweep-policy" value="f3">F3</label>
+                        <label><input type="checkbox" name="sweep-policy" value="f4">F4</label>
+                        <label><input type="checkbox" name="sweep-policy" value="bsld">BSLD</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group narrow">
+                    <label for="inp-sweep-backfills">Backfill Modes (CSV)</label>
+                    <input type="text" id="inp-sweep-backfills" value="1,0">
+                    <span class="hint">0=disabled, 1=enabled</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-sweep-wins">Window Sizes (CSV)</label>
+                    <input type="text" id="inp-sweep-wins" value="16,64,128">
+                    <span class="hint">Cross product with selected policies/backfills</span>
+                </div>
+                <div class="form-group narrow">
+                    <label for="inp-sweep-max-runs">Max Runs</label>
+                    <input type="number" id="inp-sweep-max-runs" value="18" min="1" max="100">
+                    <span class="hint">Caps total combinations</span>
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button id="btn-run-sweep" type="button" class="btn-ghost">Run Parameter Sweep</button>
+                    <span id="sweep-status" class="hint"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="wizard-card online-entry-card" id="online-entry-card">
+            <div class="wizard-card-title">Online Advisory Mode <span class="online-badge">CQTwin</span></div>
+            <p class="hint" style="margin-top:0;">
+                Trace-driven <strong>online</strong> run under a fixed committed policy, with per-cycle
+                advisory projections for a chosen pool &mdash; <em>"when would another policy have cleared
+                the live queue faster?"</em> It now lives in its own dedicated, interactive workspace.
+            </p>
+            <button id="btn-open-online" type="button" class="btn-primary">&#9889; Open Online Advisory Workspace &rarr;</button>
+        </div>
+
+        <div class="wizard-actions">
+            <button id="btn-save-preset" class="btn-ghost">Save Preset</button>
+            <button id="btn-load-preset" class="btn-ghost">Load Preset</button>
+            <button id="btn-view-results" class="btn-ghost">View Existing Results</button>
+            <button id="btn-reset-preset" class="btn-ghost">Reset</button>
+            <button id="btn-clear-results" type="button" class="btn-ghost btn-danger">Clear All Results</button>
+            <button id="btn-run-sim" class="btn-primary" disabled>Run Simulation</button>
+        </div>
+        <div class="delete-results-wrap">
+            <input type="text" id="inp-delete-results-keyword" placeholder="Delete by keyword (e.g. theta_SW__wfp_alcf)">
+            <button id="btn-preview-delete-results" type="button" class="btn-ghost">Preview Matches</button>
+            <button id="btn-delete-results" type="button" class="btn-ghost btn-danger">Delete Matching Results</button>
+        </div>
+        <input type="file" id="preset-file-input" accept=".json,application/json" style="display:none">
+        <div class="clear-results-wrap">
+            <span id="clear-results-status" class="hint"></span>
+        </div>
+        <div class="clear-results-wrap">
+            <span id="delete-results-status" class="hint"></span>
+        </div>
+        <div class="clear-results-wrap">
+            <div id="delete-results-preview" class="delete-results-preview hidden"></div>
+        </div>
+    </div>
+</section>
+
+<div id="progress-overlay" class="hidden">
+    <div class="progress-card">
+        <div class="loader-stack" aria-hidden="true">
+            <div class="loader-ring"></div>
+            <div class="loader-core"></div>
+        </div>
+        <div class="progress-title">Running __PROJECT_NAME__</div>
+        <div class="progress-file" id="prog-filename"></div>
+
+        <div class="progress-track">
+            <div id="prog-bar"></div>
+        </div>
+        <div class="progress-meta mono">
+            <span id="prog-pct">0%</span>
+            <span id="prog-stage">Queued</span>
+            <span id="prog-elapsed">0s</span>
+        </div>
+
+        <pre id="prog-log" class="progress-log">No logs yet.</pre>
+
+        <button id="btn-cancel" class="btn-ghost" style="margin-top:1rem;">Cancel Run</button>
+    </div>
+</div>
+
+<nav id="tabs" class="hidden">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="online">&#9889; Online</button>
+    <button class="tab" data-tab="system">Per-System</button>
+    <button class="tab" data-tab="snapshot">Snap Shot</button>
+    <button class="tab" data-tab="makespan">Makespan Lab</button>
+    <button class="tab" data-tab="compare">Compare</button>
+    <button class="tab" data-tab="worklog">Worklog</button>
+</nav>
+
+<main class="hidden">
+
+    <section id="tab-overview" class="tab-content active">
+        <div class="tab-header">
+            <h2>Overview</h2>
+            <div class="tab-header-right">
+                <label for="sel-run-picker" class="picker-label">Run:</label>
+                <select id="sel-run-picker" class="run-picker-sel"></select>
+                <button id="btn-pdf" class="btn-ghost">Download PDF</button>
+            </div>
+        </div>
+        <div class="controls sub-controls overview-run-controls">
+            <label for="overview-run-search">Search:</label>
+            <input type="text" id="overview-run-search" class="run-search-input" placeholder="Filter runs...">
+            <label for="overview-run-page-size">Page Size:</label>
+            <select id="overview-run-page-size">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+            </select>
+            <label for="overview-run-page">Page:</label>
+            <select id="overview-run-page"></select>
+            <span id="overview-run-count" class="hint"></span>
+        </div>
+
+        <div id="run-config-bar" class="run-config-bar hidden"></div>
+
+        <div id="overview-insights" class="insight-grid"></div>
+        <div id="overview-summary" class="summary-cards"></div>
+
+        <div class="chart-row">
+            <div class="chart-box">
+                <h3>Avg Wait vs Job Runtime</h3>
+                <canvas id="chart-wait-runtime"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>Runtime Distribution</h3>
+                <canvas id="chart-bsd-dist"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box">
+                <h3>Wait Time by Job Size</h3>
+                <canvas id="chart-wait-by-size"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>Job Size Distribution (Requested Processors)</h3>
+                <canvas id="chart-jobsize-dist"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <h3>Cluster Utilization Over Time</h3>
+                <canvas id="chart-overview-uti"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box">
+                <h3>Wait Time Violin by Runtime Size</h3>
+                <canvas id="chart-wait-violin" class="custom-plot-canvas" height="290"></canvas>
+                <div id="wait-violin-note" class="plot-note"></div>
+            </div>
+            <div class="chart-box">
+                <h3>Job Size vs Wait Time Heatmap</h3>
+                <canvas id="chart-jobsize-wait-heatmap" class="custom-plot-canvas" height="290"></canvas>
+                <div id="jobsize-heatmap-note" class="plot-note"></div>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <h3>Top Waiting Jobs</h3>
+                <div class="table-wrap slim">
+                    <table id="top-wait-table">
+                        <thead>
+                            <tr>
+                                <th>Job</th>
+                                <th>Wait</th>
+                                <th>Run</th>
+                                <th>Req Procs</th>
+                                <th>Req Time</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom:.5rem; margin-top:1.5rem;">Detailed Metrics</h3>
+        <div class="table-wrap">
+            <table id="overview-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                        <th>What it measures</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="tab-online" class="tab-content">
+        <div class="tab-header">
+            <h2>Online Advisory <span class="online-badge">CQTwin</span></h2>
+            <div class="tab-header-right">
+                <label for="sel-online-past" class="picker-label">Past run:</label>
+                <select id="sel-online-past" class="run-picker-sel">
+                    <option value="">— none loaded —</option>
+                </select>
+                <button id="btn-online-refresh-runs" class="btn-ghost" title="Refresh past-run list">&#8635;</button>
+            </div>
+        </div>
+
+        <p class="hint online-intro">
+            A live, trace-driven run under one <strong>committed</strong> policy that actually dispatches jobs,
+            while a pool of alternative policies is <strong>projected</strong> every few cycles &mdash; each answers
+            "if I took over the live queue right now, how long would jobs wait?" The committed schedule is
+            byte-identical to an offline run of that policy; the projections are advisory only.
+        </p>
+
+        <!-- ===================== CONFIG ===================== -->
+        <div id="online-config" class="online-config-card">
+            <div class="online-config-head">
+                <h3 style="margin:0;">Configure Run</h3>
+                <button id="btn-online-config-toggle" class="btn-ghost">Collapse</button>
+            </div>
+            <div id="online-config-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="sel-online-job-trace">Job Trace (.swf)</label>
+                        <select id="sel-online-job-trace"><option value="">Loading files&hellip;</option></select>
+                        <span class="hint">Which workload this online run replays</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="sel-online-committed">Committed Policy</label>
+                        <select id="sel-online-committed">
+                            <option value="fcfs">fcfs</option>
+                            <option value="lcfs">lcfs</option>
+                            <option value="sjf">sjf</option>
+                            <option value="ljf">ljf</option>
+                            <option value="srf">srf</option>
+                            <option value="lrf">lrf</option>
+                            <option value="scf">scf</option>
+                            <option value="lcf">lcf</option>
+                            <option value="wfp1">wfp1</option>
+                            <option value="wfp2">wfp2</option>
+                            <option value="wfp3" selected>wfp3</option>
+                            <option value="sww">sww</option>
+                            <option value="fcsj">fcsj</option>
+                            <option value="fat">fat</option>
+                            <option value="unicep">unicep</option>
+                            <option value="f1">f1</option>
+                            <option value="f2">f2</option>
+                            <option value="f3">f3</option>
+                            <option value="f4">f4</option>
+                            <option value="bsld">bsld</option>
+                        </select>
+                        <span class="hint">The policy that actually dispatches</span>
+                    </div>
+                    <div class="form-group narrow">
+                        <label for="sel-online-backfill">Backfill</label>
+                        <select id="sel-online-backfill">
+                            <option value="0">0 &mdash; off</option>
+                            <option value="1" selected>1 &mdash; EASY</option>
+                            <option value="2">2 &mdash; Conservative</option>
+                        </select>
+                    </div>
+                    <div class="form-group narrow">
+                        <label for="inp-online-window">Window</label>
+                        <input type="number" id="inp-online-window" value="64" min="1">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Advisory Pool
+                            <span class="hint">policies projected each cycle &mdash; include the committed one</span>
+                        </label>
+                        <div id="online-pool-actions" class="pool-actions">
+                            <span class="hint">Quick select:</span>
+                            <a href="#" data-pool="default">default (5)</a>
+                            <a href="#" data-pool="all">all</a>
+                            <a href="#" data-pool="none">none</a>
+                            <span id="online-pool-count" class="online-pool-count"></span>
+                        </div>
+                        <div id="online-pool" class="online-pool-checks">
+                            <label><input type="checkbox" value="fcfs" checked> fcfs</label>
+                            <label><input type="checkbox" value="lcfs"> lcfs</label>
+                            <label><input type="checkbox" value="sjf" checked> sjf</label>
+                            <label><input type="checkbox" value="ljf"> ljf</label>
+                            <label><input type="checkbox" value="srf"> srf</label>
+                            <label><input type="checkbox" value="lrf"> lrf</label>
+                            <label><input type="checkbox" value="scf"> scf</label>
+                            <label><input type="checkbox" value="lcf"> lcf</label>
+                            <label><input type="checkbox" value="wfp1"> wfp1</label>
+                            <label><input type="checkbox" value="wfp2"> wfp2</label>
+                            <label><input type="checkbox" value="wfp3" checked> wfp3</label>
+                            <label><input type="checkbox" value="sww"> sww</label>
+                            <label><input type="checkbox" value="fcsj"> fcsj</label>
+                            <label><input type="checkbox" value="fat"> fat</label>
+                            <label><input type="checkbox" value="unicep"> unicep</label>
+                            <label><input type="checkbox" value="f1" checked> f1</label>
+                            <label><input type="checkbox" value="f2"> f2</label>
+                            <label><input type="checkbox" value="f3"> f3</label>
+                            <label><input type="checkbox" value="f4"> f4</label>
+                            <label><input type="checkbox" value="bsld" checked> bsld</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group narrow">
+                        <label for="inp-online-horizon">Horizon (hours)</label>
+                        <input type="number" id="inp-online-horizon" value="24" min="0.1" step="0.1">
+                    </div>
+                    <div class="form-group narrow">
+                        <label for="inp-online-interval">Projection Interval</label>
+                        <input type="number" id="inp-online-interval" value="100" min="1">
+                        <span class="hint">Project every Nth cycle. 100 is fast &amp; light; 1 is exhaustive &amp; heavy</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="inp-online-label">Run Label</label>
+                        <input type="text" id="inp-online-label" placeholder="e.g. WFP3+advisory">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="online-interactive-toggle">
+                        <input type="checkbox" id="inp-online-interactive">
+                        <span><strong>Interactive step-through</strong> &mdash; pause at each decision cycle to
+                        view the live status + advisory and choose the policy yourself (instead of running headless).</span>
+                    </label>
+                </div>
+                <div class="form-row online-launch-row">
+                    <button id="btn-run-online" class="btn-primary" disabled>&#9889; Launch Online Advisory Run</button>
+                    <span id="online-run-status" class="hint"></span>
+                </div>
+                <div id="online-run-error" class="online-run-error hidden"></div>
+            </div>
+        </div>
+
+        <!-- ===================== INLINE PROGRESS ===================== -->
+        <div id="online-progress" class="online-progress hidden">
+            <div class="online-prog-top">
+                <div>
+                    <div class="online-prog-title" id="online-prog-title">Preparing&hellip;</div>
+                    <div class="online-prog-sub" id="online-prog-stage">Queued</div>
+                </div>
+                <button id="btn-online-cancel" class="btn-ghost btn-danger">Cancel</button>
+            </div>
+            <div class="progress-track live"><div id="online-prog-bar"></div></div>
+            <div class="progress-meta mono">
+                <span id="online-prog-pct">0%</span>
+                <span id="online-prog-eta">ETA &mdash;</span>
+                <span id="online-prog-elapsed">0s</span>
+            </div>
+
+            <div id="online-prog-metrics" class="online-prog-metrics"></div>
+
+            <div class="online-prog-sparkwrap">
+                <canvas id="online-prog-spark" class="online-prog-spark" height="46"></canvas>
+                <div class="online-prog-spark-label mono">% complete over elapsed time</div>
+            </div>
+
+            <div class="online-prog-logwrap">
+                <button id="btn-online-prog-log" class="btn-ghost btn-mini" type="button">Show log &#9662;</button>
+                <pre id="online-prog-log" class="progress-log hidden">No logs yet.</pre>
+            </div>
+        </div>
+
+        <!-- ===================== INTERACTIVE SESSION ===================== -->
+        <div id="online-session" class="online-session hidden">
+            <div class="online-session-head">
+                <div>
+                    <div class="online-session-title">Interactive Session <span class="online-badge">step-through</span></div>
+                    <div class="online-session-sub" id="online-session-sub">&mdash;</div>
+                </div>
+                <button id="btn-online-session-stop" class="btn-ghost btn-danger">Stop session</button>
+            </div>
+
+            <div id="online-session-status" class="summary-cards"></div>
+
+            <div class="chart-row">
+                <div class="chart-box" style="flex:1.4 1 0;">
+                    <h3 style="margin-top:0;">Advisory this cycle
+                        <span class="hint">projected avg wait if each policy took over the live queue now</span></h3>
+                    <div id="online-session-advisory" class="table-wrap"></div>
+                </div>
+                <div class="chart-box" style="flex:1 1 0;">
+                    <h3 style="margin-top:0;">Queue <span class="hint">top waiting jobs</span></h3>
+                    <div id="online-session-queue" class="table-wrap"></div>
+                </div>
+            </div>
+
+            <div id="online-session-actions" class="online-session-actions">
+                <div class="sess-act-row sess-act-primary">
+                    <button id="btn-online-go-advisory" class="btn-primary">Go with advisory</button>
+                    <span class="hint" id="online-advisory-pick"></span>
+                </div>
+                <div class="sess-act-row sess-act-pick">
+                    <label>Or apply a policy this cycle:</label>
+                    <span id="online-session-policy-btns"></span>
+                </div>
+                <div class="sess-act-row sess-act-fast">
+                    <label>Fast-forward <span class="hint" id="online-ff-policy"></span>:</label>
+                    <button class="btn-ghost" id="btn-online-ff-change">Next queue change</button>
+                    <button class="btn-ghost" data-adv="10">+10</button>
+                    <button class="btn-ghost" data-adv="100">+100</button>
+                    <button class="btn-ghost" id="btn-online-finish">Finish &#9656;</button>
+                    <span class="hint">advances with the policy you last chose (committed until then)</span>
+                </div>
+            </div>
+
+            <div id="online-session-summary" class="online-reco hidden"></div>
+
+            <div class="online-session-histwrap">
+                <h3>Decisions <span class="hint" id="online-session-histcount"></span></h3>
+                <div id="online-session-history" class="table-wrap"></div>
+            </div>
+        </div>
+
+        <!-- ===================== RESULTS ===================== -->
+        <div id="online-empty" class="online-empty">
+            No online run loaded yet &mdash; configure above and launch, or pick a past run from the top-right.
+        </div>
+
+        <div id="online-results" class="hidden">
+            <div id="online-reco" class="online-reco"></div>
+            <div id="online-cards" class="summary-cards"></div>
+
+            <div class="chart-row">
+                <div class="chart-box full">
+                    <div class="online-chart-head">
+                        <h3 style="margin:0;">Projected Avg Wait per Policy over Simulation Time</h3>
+                        <div class="online-chart-controls">
+                            <label class="toggle-inline"><input type="checkbox" id="online-delta-toggle"> &Delta; vs committed</label>
+                            <label class="toggle-inline">Units
+                                <select id="online-units">
+                                    <option value="h">hours</option>
+                                    <option value="s">seconds</option>
+                                </select>
+                            </label>
+                            <button id="btn-online-isolate" class="btn-ghost">Committed only</button>
+                            <button id="btn-online-showall" class="btn-ghost">Show all</button>
+                        </div>
+                    </div>
+                    <p class="hint" style="margin-top:2px;">
+                        Each line is a pool policy's projected average queue wait if it took over at that cycle.
+                        The <strong>committed</strong> policy (bold) is dispatching for real &mdash; the self-consistent
+                        baseline. Click a legend entry to toggle it; click a table row below to isolate one policy.
+                    </p>
+                    <canvas id="chart-online-advisory" height="120"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box full">
+                    <div class="online-chart-head">
+                        <h3 style="margin:0;">Policy Comparison</h3>
+                        <a id="online-csv-link" class="btn-ghost" download>&#8681; advisory.csv</a>
+                    </div>
+                    <p class="hint" style="margin-top:2px;">
+                        Click a column header to sort; click a row to isolate that policy on the chart above.
+                        "Win rate" = share of evaluated cycles where the policy projected the lowest wait.
+                    </p>
+                    <div id="online-table" class="table-wrap"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="tab-system" class="tab-content">
+        <h2>Per-System Analysis</h2>
+        <div class="controls">
+            <label>System:</label>
+            <select id="system-select"></select>
+            <label>Run (Config):</label>
+            <select id="system-run-select"></select>
+            <label for="system-run-search">Search:</label>
+            <input type="text" id="system-run-search" class="run-search-input" placeholder="Filter runs...">
+            <label for="system-run-page-size">Page Size:</label>
+            <select id="system-run-page-size">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+            </select>
+            <label for="system-run-page">Page:</label>
+            <select id="system-run-page"></select>
+            <span id="system-run-count" class="hint"></span>
+        </div>
+        <div id="system-info" class="summary-cards"></div>
+
+        <div class="chart-row">
+            <div class="chart-box">
+                <h3>Utilization Over Time</h3>
+                <canvas id="chart-uti-ts" height="260"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>Avg Wait-Time Over Makespan</h3>
+                <canvas id="chart-scatter-run" height="260"></canvas>
+            </div>
+        </div>
+        <div class="chart-row">
+            <div class="chart-box">
+                <h3>Queue Depth Over Time</h3>
+                <canvas id="chart-qd-ts" height="260"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>Wait Time vs Requested Processors</h3>
+                <canvas id="chart-scatter-wait" height="260"></canvas>
+            </div>
+        </div>
+
+        <h3 style="margin-bottom:.5rem; margin-top:1.5rem;">Detailed Metrics</h3>
+        <div class="table-wrap">
+            <table id="system-table">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        <th>Value</th>
+                        <th>What it measures</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="tab-snapshot" class="tab-content">
+        <h2>Snap Shot</h2>
+        <details class="wizard-card guide-card snapshot-guide">
+            <summary class="config-help-summary">Guide: What Each Snap Shot Control And Output Means</summary>
+            <div class="table-wrap" style="margin-bottom:0;">
+                <table class="config-help-table">
+                    <thead>
+                        <tr><th>Item</th><th>Meaning / What it does</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Run</td><td>Selects the completed CQTwin run whose state you want to replay from a snapshot.</td></tr>
+                        <tr><td>Search / Page / Page Size</td><td>Filters and pages through available historical runs.</td></tr>
+                        <tr><td>Snapshot Mode / Snapshot Time</td><td>Chooses where to freeze the run. Percent mode uses the run makespan; absolute mode uses simulation seconds.</td></tr>
+                        <tr><td>Fork Policy</td><td>Alternative scheduling policy used for the what-if branch.</td></tr>
+                        <tr><td>Backfill / Window Size</td><td>Forked scheduling controls for the what-if branch.</td></tr>
+                        <tr><td>Horizon (hours)</td><td>How far forward to project the queue state from the selected snapshot.</td></tr>
+                        <tr><td>Downtime (hours)</td><td>Duration used by the downtime advisor and planned maintenance what-if.</td></tr>
+                        <tr><td>Planned Downtime Offset / Notice</td><td>Injects a simulated maintenance window relative to the snapshot and shows its effect on waits and queue depth.</td></tr>
+                        <tr><td>Force Job ID</td><td>Optional manual pin for a queued job. In the UI, clicking a queue row sets and runs this automatically.</td></tr>
+                        <tr><td>Save Fork</td><td>Saves the current Snap Shot scenario, including selected run, snapshot, fork policy, pinned job, and results.</td></tr>
+                        <tr><td>Open Fork In New Tab</td><td>Saves the current scenario and opens it in a new tab for side-by-side counterfactual exploration.</td></tr>
+                        <tr><td>Clear Force Job</td><td>Removes the current pinned-job what-if and reruns the plain fork scenario.</td></tr>
+                        <tr><td>Evaluate Snapshot</td><td>Replays from the selected snapshot and updates all baseline, fork, and downtime outputs.</td></tr>
+                        <tr><td>Saved Forks / Load Saved Fork</td><td>Reloads a previously saved scenario branch.</td></tr>
+                        <tr><td>Snapshot Summary</td><td>Current state at the frozen time: queued jobs, running jobs, future arrivals, free processors, and next completion.</td></tr>
+                        <tr><td>Current State tables</td><td>Running jobs and queued jobs at the snapshot under the original run state.</td></tr>
+                        <tr><td>Selected Job: Why Is It Waiting?</td><td>Explains one queued job’s projected wait, policy rank, earliest capacity-only start, jobs ahead, running blockers, maintenance context, and confidence signals.</td></tr>
+                        <tr><td>Confidence & Validation</td><td>Shows how to interpret the estimates: validated engine scope, simulated-estimate caveat, and historical analog support for the selected job.</td></tr>
+                        <tr><td>Forked Scenario Summary</td><td>Aggregates how the alternative policy changes projected wait across the queue.</td></tr>
+                        <tr><td>Baseline / Forked Queue After Horizon</td><td>Shows what the queue is projected to look like after the chosen number of hours under each branch.</td></tr>
+                        <tr><td>Planned Downtime Impact</td><td>Shows how an explicit maintenance window changes projected waits for queued jobs.</td></tr>
+                        <tr><td>Downtime Advisor</td><td>Ranks low-impact maintenance start windows based on projected queue and running pressure.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </details>
+        <div class="controls">
+            <label for="op-run-select">Run:</label>
+            <select id="op-run-select" class="run-picker-sel"></select>
+            <label for="op-run-search">Search:</label>
+            <input type="text" id="op-run-search" class="run-search-input" placeholder="Filter runs...">
+            <label for="op-run-page-size">Page Size:</label>
+            <select id="op-run-page-size">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+            </select>
+            <label for="op-run-page">Page:</label>
+            <select id="op-run-page"></select>
+            <span id="op-run-count" class="hint"></span>
+        </div>
+
+        <div class="controls snapshot-controls">
+            <label for="op-time-mode">Snapshot Mode:</label>
+            <select id="op-time-mode">
+                <option value="percent" selected>Percent of Makespan</option>
+                <option value="absolute">Absolute Seconds</option>
+            </select>
+            <label for="op-time-slider">Snapshot Time:</label>
+            <input type="range" id="op-time-slider" min="0" max="100" step="0.1" value="50">
+            <input type="number" id="op-time-input" min="0" max="100" step="0.1" value="50">
+            <span id="op-time-hint" class="hint"></span>
+        </div>
+
+        <div class="controls snapshot-controls">
+            <label for="op-preview-policy">Fork Policy:</label>
+            <select id="op-preview-policy">
+                <option value="fcfs">FCFS</option>
+                <option value="lcfs">LCFS</option>
+                <option value="sjf">SJF</option>
+                <option value="ljf">LJF</option>
+                <option value="srf">SRF</option>
+                <option value="lrf">LRF</option>
+                <option value="scf">SCF</option>
+                <option value="lcf">LCF</option>
+                <option value="wfp1">WFP1</option>
+                <option value="wfp2">WFP2</option>
+                <option value="wfp3">WFP3</option>
+                <option value="sww">SWW</option>
+                <option value="fcsj">FCSJ</option>
+                <option value="fat">FAT</option>
+                <option value="unicep">UNICEP</option>
+                <option value="f1">F1</option>
+                <option value="f2">F2</option>
+                <option value="f3">F3</option>
+                <option value="f4">F4</option>
+                <option value="bsld">BSLD</option>
+            </select>
+            <label for="op-preview-backfill">Backfill:</label>
+            <select id="op-preview-backfill">
+                <option value="2">Conservative</option>
+                <option value="1">EASY</option>
+                <option value="0">Disabled</option>
+            </select>
+            <label for="op-preview-window">Window Size:</label>
+            <input type="number" id="op-preview-window" min="1" placeholder="same as run">
+            <label for="op-horizon-hours">Horizon (hours):</label>
+            <input type="number" id="op-horizon-hours" min="1" value="24">
+            <label for="op-downtime-hours">Downtime (hours):</label>
+            <input type="number" id="op-downtime-hours" min="0.5" step="0.5" value="4">
+            <label for="op-planned-downtime-offset">Planned Downtime Offset (hours):</label>
+            <input type="number" id="op-planned-downtime-offset" min="0" step="0.5" placeholder="optional">
+            <label for="op-planned-downtime-notice">Notice (hours):</label>
+            <input type="number" id="op-planned-downtime-notice" min="0" step="1" value="48">
+        </div>
+
+        <div class="controls snapshot-controls">
+            <label for="op-force-job">Force Job ID:</label>
+            <input type="number" id="op-force-job" min="-1" placeholder="optional">
+            <label for="op-fork-name">Fork Name:</label>
+            <input type="text" id="op-fork-name" placeholder="optional saved scenario name">
+            <button id="btn-op-save-fork" type="button" class="btn-ghost">Save Fork</button>
+            <button id="btn-op-open-fork" type="button" class="btn-ghost">Open Fork In New Tab</button>
+            <button id="btn-op-clear-force" type="button" class="btn-ghost">Clear Force Job</button>
+            <button id="btn-op-run" type="button" class="btn-primary">Evaluate Snapshot</button>
+            <span id="op-status" class="hint"></span>
+        </div>
+
+        <div class="controls snapshot-controls">
+            <label for="op-saved-forks">Saved Forks:</label>
+            <select id="op-saved-forks">
+                <option value="">No saved forks loaded</option>
+            </select>
+            <button id="btn-op-refresh-forks" type="button" class="btn-ghost">Refresh</button>
+            <button id="btn-op-load-fork" type="button" class="btn-ghost">Load Saved Fork</button>
+            <span id="op-active-fork" class="hint"></span>
+        </div>
+
+        <div class="snapshot-phase">
+            <div class="snapshot-phase-header">
+                <h3>View A - Current State</h3>
+                <p>Freeze one point in the run and inspect the queue, the running set, and why a selected job is waiting under the current policy.</p>
+            </div>
+        <div id="op-run-meta" class="run-config-bar hidden"></div>
+        <div id="op-snapshot-summary" class="summary-cards"></div>
+        <div id="op-selected-job-panel" class="chart-box snapshot-detail-box">
+            <h3>Selected Job: Why Is It Waiting?</h3>
+            <div id="op-selected-job-summary" class="summary-cards compact-cards"></div>
+            <div id="op-selected-job-details" class="insight-grid"></div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box">
+                <h3>Running Jobs At Snapshot</h3>
+                <div class="table-wrap slim">
+                    <table id="op-running-table">
+                        <thead>
+                            <tr>
+                                <th>Job</th>
+                                <th>User</th>
+                                <th>Req Procs</th>
+                                <th>Req Walltime</th>
+                                <th>Submit</th>
+                                <th>Started</th>
+                                <th>Ends</th>
+                                <th>Remaining Runtime</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="chart-box">
+                <h3>Queue At Snapshot</h3>
+                <div class="table-wrap slim">
+                    <table id="op-queue-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Job</th>
+                                <th>User</th>
+                                <th>Req Procs</th>
+                                <th>Req Walltime</th>
+                                <th>Submit</th>
+                                <th>Current Wait</th>
+                                <th>Baseline Start</th>
+                                <th>Baseline Remaining</th>
+                                <th>Preview Start</th>
+                                <th>Preview Remaining</th>
+                                <th>Preview Delta</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <div class="snapshot-phase">
+            <div class="snapshot-phase-header">
+                <h3>View B - Forked Scenario</h3>
+                <p>Compare the original policy against a forked branch, pin a queued job, and test maintenance plans without altering the source run.</p>
+            </div>
+            <div id="op-validation-banner" class="insight-grid"></div>
+            <div id="op-impact-summary" class="summary-cards"></div>
+            <div id="op-force-summary" class="insight-grid"></div>
+
+            <div class="chart-row">
+                <div class="chart-box">
+                    <h3>Baseline Queue After Horizon</h3>
+                    <div id="op-baseline-horizon-summary" class="summary-cards compact-cards"></div>
+                    <div class="table-wrap slim">
+                        <table id="op-baseline-horizon-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Job</th>
+                                    <th>User</th>
+                                    <th>Req Procs</th>
+                                    <th>Req Walltime</th>
+                                    <th>Remaining Wait</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <h3>Forked Queue After Horizon</h3>
+                    <div id="op-preview-horizon-summary" class="summary-cards compact-cards"></div>
+                    <div class="table-wrap slim">
+                        <table id="op-preview-horizon-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Job</th>
+                                    <th>User</th>
+                                    <th>Req Procs</th>
+                                    <th>Req Walltime</th>
+                                    <th>Remaining Wait</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box">
+                    <h3>Planned Downtime Impact</h3>
+                    <div id="op-downtime-summary" class="summary-cards compact-cards"></div>
+                    <div class="table-wrap slim">
+                        <table id="op-downtime-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Job</th>
+                                    <th>User</th>
+                                    <th>Preview Remaining</th>
+                                    <th>With Downtime</th>
+                                    <th>Delta</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <h3>Queue After Horizon With Planned Downtime</h3>
+                    <div id="op-downtime-horizon-summary" class="summary-cards compact-cards"></div>
+                    <div class="table-wrap slim">
+                        <table id="op-downtime-horizon-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Job</th>
+                                    <th>User</th>
+                                    <th>Req Procs</th>
+                                    <th>Req Walltime</th>
+                                    <th>Remaining Wait</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box">
+                    <h3>Baseline Downtime Advisor</h3>
+                    <div class="table-wrap slim">
+                        <table id="op-baseline-downtime-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Offset</th>
+                                    <th>Queued</th>
+                                    <th>Running</th>
+                                    <th>Running Procs</th>
+                                    <th>Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <h3>Forked Downtime Advisor</h3>
+                    <div class="table-wrap slim">
+                        <table id="op-preview-downtime-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Offset</th>
+                                    <th>Queued</th>
+                                    <th>Running</th>
+                                    <th>Running Procs</th>
+                                    <th>Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="tab-makespan" class="tab-content">
+        <h2>Makespan Lab</h2>
+        <div class="controls">
+            <label for="mk-run-select">Run:</label>
+            <select id="mk-run-select" class="run-picker-sel"></select>
+        </div>
+        <div class="controls sub-controls">
+            <label for="mk-run-search">Search:</label>
+            <input type="text" id="mk-run-search" class="run-search-input" placeholder="Filter runs...">
+            <label for="mk-run-page-size">Page Size:</label>
+            <select id="mk-run-page-size">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+            </select>
+            <label for="mk-run-page">Page:</label>
+            <select id="mk-run-page"></select>
+            <span id="mk-run-count" class="hint"></span>
+        </div>
+
+        <div class="controls makespan-window-controls">
+            <label for="mk-mode">Adjust Mode:</label>
+            <select id="mk-mode">
+                <option value="percent" selected>Percent of makespan</option>
+                <option value="seconds">Absolute time (seconds)</option>
+            </select>
+            <label for="mk-start-slider">Window Start:</label>
+            <input type="range" id="mk-start-slider" min="0" max="100" step="0.1" value="0">
+            <input type="number" id="mk-start-input" min="0" max="100" step="0.1" value="0">
+            <label for="mk-end-slider">Window End:</label>
+            <input type="range" id="mk-end-slider" min="0" max="100" step="0.1" value="100">
+            <input type="number" id="mk-end-input" min="0" max="100" step="0.1" value="100">
+            <button id="mk-reset-window" type="button" class="btn-ghost">Reset</button>
+            <span id="mk-window-hint" class="hint"></span>
+        </div>
+
+        <div id="mk-summary" class="summary-cards"></div>
+
+        <div class="chart-row">
+            <div class="chart-box">
+                <h3>Utilization Over Selected Makespan</h3>
+                <canvas id="chart-mk-util" height="260"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>Queue Depth Over Selected Makespan</h3>
+                <canvas id="chart-mk-queue" height="260"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <h3>Avg Wait Over Selected Makespan</h3>
+                <canvas id="chart-mk-wait" height="260"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <section id="tab-compare" class="tab-content">
+        <h2>Compare Runs</h2>
+        <p class="hint">Online advisory runs open in their own view (Overview) and are not listed here — projected and realized waits shouldn't be overlaid in one chart.</p>
+        <div class="controls compare-controls">
+            <label for="compare-system-select">System:</label>
+            <select id="compare-system-select"></select>
+            <label for="compare-run-picker">Run (Config):</label>
+            <select id="compare-run-picker" class="run-picker-sel"></select>
+            <button id="btn-compare-add" type="button" class="btn-ghost">Add Run</button>
+            <button id="btn-compare-clear" type="button" class="btn-ghost">Clear</button>
+            <label>Baseline:</label>
+            <select id="compare-baseline"></select>
+        </div>
+        <div class="controls compare-controls sub-controls">
+            <label for="compare-run-search">Run Search:</label>
+            <input type="text" id="compare-run-search" class="run-search-input" placeholder="Filter available runs...">
+            <label for="compare-run-page-size">Run Page Size:</label>
+            <select id="compare-run-page-size">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+            </select>
+            <label for="compare-run-page">Run Page:</label>
+            <select id="compare-run-page"></select>
+            <span id="compare-run-count" class="hint"></span>
+        </div>
+        <div class="controls compare-controls sub-controls">
+            <label for="compare-selected-search">Selected Search:</label>
+            <input type="text" id="compare-selected-search" class="run-search-input" placeholder="Filter selected runs...">
+            <label for="compare-selected-page-size">Chip Page Size:</label>
+            <select id="compare-selected-page-size">
+                <option value="8">8</option>
+                <option value="16" selected>16</option>
+                <option value="32">32</option>
+            </select>
+            <label for="compare-selected-page">Chip Page:</label>
+            <select id="compare-selected-page"></select>
+            <span id="compare-selected-count" class="hint"></span>
+        </div>
+        <div id="compare-selected" class="compare-selected-list"></div>
+
+        <div class="controls compare-controls sub-controls">
+            <label for="compare-window-mode">Window Mode:</label>
+            <select id="compare-window-mode">
+                <option value="percent" selected>Percent of Makespan</option>
+                <option value="absolute">Absolute Seconds</option>
+            </select>
+            <label for="compare-window-start-range">Start:</label>
+            <input type="range" id="compare-window-start-range" min="0" max="100" step="1" value="0">
+            <input type="number" id="compare-window-start-input" min="0" max="100" step="1" value="0">
+            <label for="compare-window-end-range">End:</label>
+            <input type="range" id="compare-window-end-range" min="0" max="100" step="1" value="100">
+            <input type="number" id="compare-window-end-input" min="0" max="100" step="1" value="100">
+            <button id="btn-compare-window-reset" type="button" class="btn-ghost">Reset Window</button>
+            <span id="compare-window-hint" class="hint"></span>
+        </div>
+
+        <div class="controls compare-controls sub-controls">
+            <label for="compare-overlay-align">Overlay Align:</label>
+            <select id="compare-overlay-align">
+                <option value="first_submit" selected>First Submit</option>
+                <option value="peak_queue">Peak Queue</option>
+            </select>
+            <label for="compare-overlay-smooth">Smoothing:</label>
+            <input type="range" id="compare-overlay-smooth" min="0" max="0.95" step="0.05" value="0.15">
+            <span id="compare-overlay-smooth-val" class="hint">0.15</span>
+            <label><input type="checkbox" id="compare-overlay-normalize"> Normalize X</label>
+            <label><input type="checkbox" id="compare-overlay-band"> Show Spread Band</label>
+        </div>
+
+        <div class="controls compare-controls sub-controls">
+            <label for="compare-custom-name">Custom Metric:</label>
+            <input type="text" id="compare-custom-name" class="run-search-input" placeholder="Metric name">
+            <input type="text" id="compare-custom-formula" class="run-search-input" placeholder="Formula, e.g. avg_wait / makespan">
+            <button id="btn-compare-custom-add" type="button" class="btn-ghost">Add Metric</button>
+            <button id="btn-compare-custom-remove" type="button" class="btn-ghost">Remove Selected</button>
+            <span id="compare-custom-status" class="hint"></span>
+        </div>
+
+        <div class="controls compare-controls sub-controls">
+            <label for="compare-session-notes">Session Notes:</label>
+            <input type="text" id="compare-session-notes" class="run-search-input" placeholder="Optional notes for export/import">
+            <button id="btn-compare-session-export" type="button" class="btn-ghost">Export Session</button>
+            <label class="btn-upload" for="compare-session-import">Import Session</label>
+            <input type="file" id="compare-session-import" accept=".json,application/json" style="display:none">
+            <span id="compare-session-status" class="hint"></span>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <div class="chart-header">
+                    <h3>Metric Comparison</h3>
+                    <select id="compare-metric">
+                        <option value="avg_wait">Avg Wait</option>
+                        <option value="wait_p95">Wait p95</option>
+                        <option value="wait_p99">Wait p99</option>
+                        <option value="median_wait">Median Wait</option>
+                        <option value="max_wait">Max Wait</option>
+                        <option value="avg_runtime">Avg Runtime</option>
+                        <option value="avg_turnaround">Avg Turnaround</option>
+                        <option value="avg_utilization">Avg Utilization</option>
+                        <option value="peak_utilization">Peak Utilization</option>
+                        <option value="avg_queue_depth">Avg Queue Depth</option>
+                        <option value="makespan">Makespan</option>
+                        <option value="avg_slowdown">Avg Slowdown</option>
+                        <option value="avg_bounded_slowdown">Avg Bounded Slowdown</option>
+                    </select>
+                </div>
+                <canvas id="chart-compare" height="280"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <div class="chart-header">
+                    <h3>Policy Trade-off Radar</h3>
+                </div>
+                <canvas id="chart-compare-radar" height="340"></canvas>
+                <div id="compare-radar-note" class="plot-note"></div>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <div class="chart-header">
+                    <h3>Pareto Frontier</h3>
+                </div>
+                <div class="controls compare-controls sub-controls pareto-controls">
+                    <label for="compare-pareto-x">X Metric:</label>
+                    <select id="compare-pareto-x" class="run-picker-sel"></select>
+                    <label for="compare-pareto-x-goal">X Goal:</label>
+                    <select id="compare-pareto-x-goal" class="run-picker-sel">
+                        <option value="min">Minimize</option>
+                        <option value="max">Maximize</option>
+                    </select>
+                    <label for="compare-pareto-y">Y Metric:</label>
+                    <select id="compare-pareto-y" class="run-picker-sel"></select>
+                    <label for="compare-pareto-y-goal">Y Goal:</label>
+                    <select id="compare-pareto-y-goal" class="run-picker-sel">
+                        <option value="max">Maximize</option>
+                        <option value="min">Minimize</option>
+                    </select>
+                </div>
+                <canvas id="chart-compare-pareto" height="320"></canvas>
+                <div id="compare-pareto-note" class="plot-note"></div>
+                <div class="table-wrap slim pareto-table-wrap">
+                    <table id="compare-pareto-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Run</th>
+                                <th>Status</th>
+                                <th id="compare-pareto-x-head">X Metric</th>
+                                <th id="compare-pareto-y-head">Y Metric</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5">Select at least two runs to compute a Pareto frontier.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <div class="chart-header">
+                    <h3>Wait-Time CDF</h3>
+                </div>
+                <canvas id="chart-compare-wait-cdf" height="300"></canvas>
+                <div id="compare-wait-cdf-note" class="plot-note"></div>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <h3>Utilization Timeline Overlay</h3>
+                <canvas id="chart-compare-uti" height="280"></canvas>
+                <div id="compare-overlay-note" class="plot-note"></div>
+            </div>
+        </div>
+
+        <div class="chart-row">
+            <div class="chart-box full">
+                <h3>Avg Wait Over Makespan (Overlay)</h3>
+                <canvas id="chart-compare-wait-makespan" height="280"></canvas>
+                <div id="compare-wait-makespan-note" class="plot-note"></div>
+            </div>
+        </div>
+
+    </section>
+
+    <section id="tab-worklog" class="tab-content">
+        <h2>Run Log & Worklog SWF Analysis</h2>
+        <div class="chart-box full">
+            <h3>Worklog SWF Analyzer</h3>
+            <div class="controls worklog-analyzer-controls">
+                <label for="worklog-swf-select">SWF File:</label>
+                <select id="worklog-swf-select" class="run-picker-sel">
+                    <option value="">Loading worklog files...</option>
+                </select>
+                <button id="btn-worklog-analyze" type="button" class="btn-ghost">Analyze Worklog</button>
+                <label class="btn-upload" for="worklog-upload-input">Upload SWF to Worklogs</label>
+                <input type="file" id="worklog-upload-input" accept=".swf" style="display:none">
+            </div>
+            <div id="worklog-status" class="hint"></div>
+            <div id="worklog-meta" class="hint"></div>
+            <div id="worklog-summary" class="summary-cards"></div>
+
+            <div class="chart-row">
+                <div class="chart-box">
+                    <h3>Runtime Distribution</h3>
+                    <canvas id="chart-worklog-runtime-dist" height="250"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Requested Processor Distribution</h3>
+                    <canvas id="chart-worklog-procs-dist" height="250"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box">
+                    <h3>Wait by Runtime Class</h3>
+                    <canvas id="chart-worklog-runtime-class-wait" height="250"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Requested vs Actual Runtime (Sample)</h3>
+                    <canvas id="chart-worklog-scatter" height="250"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box">
+                    <h3>Job Arrival Rate & Avg Wait</h3>
+                    <canvas id="chart-worklog-arrival" height="250"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Requested Load Over Makespan</h3>
+                    <canvas id="chart-worklog-util-makespan" height="250"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box full">
+                    <h3>Queue Pressure Timeline</h3>
+                    <canvas id="chart-worklog-pressure" height="250"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box full">
+                    <h3>Processor x Runtime Wait Heatmap</h3>
+                    <canvas id="chart-worklog-proc-runtime-heatmap" class="custom-plot-canvas" height="310"></canvas>
+                    <div id="worklog-proc-runtime-heatmap-note" class="plot-note"></div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box full">
+                    <h3>Wait Heatmap (Req Procs x Wait Bucket)</h3>
+                    <canvas id="chart-worklog-heatmap" class="custom-plot-canvas" height="290"></canvas>
+                    <div id="worklog-heatmap-note" class="plot-note"></div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-box">
+                    <h3>Top Users by Job Count</h3>
+                    <div class="table-wrap slim">
+                        <table id="worklog-users-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Jobs</th>
+                                    <th>Avg Wait</th>
+                                    <th>Max Wait</th>
+                                    <th>Avg Runtime</th>
+                                    <th>Avg Req Procs</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <h3>Top Congestion Windows</h3>
+                    <div class="table-wrap slim">
+                        <table id="worklog-congestion-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Time</th>
+                                    <th>Queue Depth</th>
+                                    <th>Queue Procs</th>
+                                    <th>Running Share</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="margin-top:1rem;">Simulation Run Log</h3>
+        <div class="controls">
+            <label>Filter:</label>
+            <select id="worklog-filter"><option value="all">All</option></select>
+        </div>
+        <div class="table-wrap">
+            <table id="worklog-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Timestamp</th>
+                        <th>Run</th>
+                        <th>Input</th>
+                        <th>Algorithm</th>
+                        <th>Backfill</th>
+                        <th>Win</th>
+                        <th>Jobs</th>
+                        <th>Avg Wait</th>
+                        <th>Wait p95</th>
+                        <th>Avg Util</th>
+                        <th>Peak QDepth</th>
+                        <th>Makespan</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>__PROJECT_NAME__ | Native C++ Simulation with Web Dashboard</p>
+</footer>
+
+<script src="js/app.js?v=20260801_1030"></script>
+<script src="js/setup.js?v=20260731_2030"></script>
+<script src="js/online.js?v=20260801_1700"></script>
+<script src="js/results.js?v=20260218_1724"></script>
+<script src="js/overview.js?v=20260224_1435"></script>
+<script src="js/system.js?v=20260225_1700"></script>
+<script src="js/snapshot.js?v=20260707_snapshot"></script>
+<script src="js/makespan.js?v=20260226_1115"></script>
+<script src="js/compare.js?v=20260604_2105"></script>
+<script src="js/worklog.js?v=20260604_2105"></script>
+</body>
+</html>
